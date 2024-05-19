@@ -4,7 +4,13 @@
 2. 利用 Chaquopy 集成 Python 代码，参考：[photo2pixel](https://github.com/Jzou44/photo2pixel)
 3. MVVM 架构
 
-<img src="example_image.jpg" alt="Example Image" width="300"/>
+<table>
+  <tr>
+    <td><img src="example1.png" alt="Image 1" width="230"/></td>
+    <td><img src="example2.png" alt="Image 2" width="230"/></td>
+    <td><img src="example3.png" alt="Image 3" width="230"/></td>
+  </tr>
+</table>
 
 <details>
 <summary>English</summary>
