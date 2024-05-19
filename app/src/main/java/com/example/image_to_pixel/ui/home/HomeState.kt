@@ -10,5 +10,12 @@ data class HomeState(
     val pixelImageBitmap : Bitmap? = null,
     val pixelImageFile : File? = null,
     val selectImageFile: File? = null,
-    val selectedConvertOption: Int = 0
+    val selectedConvertOption: Int = 0,
+    var processing: LoadingState = LoadingState.COMPLETE,
+    var errorMessage: String? = null
+
 )
+
+enum class LoadingState {
+    LOADING, TIMEOUT, COMPLETE,ERROR
+}

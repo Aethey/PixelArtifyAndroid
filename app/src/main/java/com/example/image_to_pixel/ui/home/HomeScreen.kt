@@ -7,9 +7,16 @@ import android.content.ContextWrapper
 import android.content.Intent
 import android.graphics.Bitmap
 import android.net.Uri
+import android.widget.Toast
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.PickVisualMediaRequest
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.animation.core.LinearEasing
+import androidx.compose.animation.core.RepeatMode
+import androidx.compose.animation.core.animateFloat
+import androidx.compose.animation.core.infiniteRepeatable
+import androidx.compose.animation.core.rememberInfiniteTransition
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -24,6 +31,7 @@ import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.safeDrawingPadding
 import androidx.compose.foundation.layout.size
@@ -34,6 +42,7 @@ import androidx.compose.material.icons.filled.Add
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.SnackbarHostState
@@ -49,30 +58,29 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.composed
+import androidx.compose.ui.draw.alpha
+import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.asImageBitmap
-import androidx.compose.ui.graphics.drawscope.DrawScope
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
-import androidx.compose.ui.text.TextStyle
-import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
+import androidx.compose.ui.zIndex
 import androidx.core.app.ActivityCompat
 import androidx.core.content.FileProvider
-import androidx.core.content.res.ResourcesCompat
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavHostController
 import coil.compose.AsyncImage
 import com.example.PixelImage.R
 import com.example.image_to_pixel.Constants
 import com.example.image_to_pixel.Screens
+import com.example.image_to_pixel.component.LoadingAnimation
 import kotlinx.coroutines.launch
 import java.io.File
-import kotlin.random.Random
 
 
 @Composable
@@ -140,10 +148,12 @@ fun HomeScreen(
     fun onConvertImage() {
         viewModel.convertImage(state.selectImageFile, state.selectedConvertOption)
     }
+
     fun onShareImage() {
         state.pixelImageFile?.let { shareImage(context, it) }
     }
-    fun onSaveImage(){
+
+    fun onSaveImage() {
         viewModel.onSaveFileToGallery()
     }
 
@@ -151,21 +161,24 @@ fun HomeScreen(
         viewModel.selectedConvertOption(index)
     }
 
-    fun onClearUIState(){
+    fun onClearUIState() {
         viewModel.onClearUIState()
     }
 
 // init widget
+
     HomeScreenContent(
-        context,
-        state.selectImageFile,
-        state.pixelImageBitmap,
+        selectImageFile = state.selectImageFile,
+        pixelImageBitmap = state.pixelImageBitmap,
+        selectedOption = state.selectedConvertOption,
+        processing = state.processing,
         onSelectImageFromGallery = { onSelectImageFromGallery() },
         onConvertImage = {
             onConvertImage()
         },
         onSaveImage = { onSaveImage() },
-        onShareImage = { onShareImage()
+        onShareImage = {
+            onShareImage()
         },
         onOptionSelected = {
             onOptionSelected(it)
@@ -173,47 +186,54 @@ fun HomeScreen(
         onClear = {
             onClearUIState()
         },
-        takePhotoAction = {
+        onCameraPermissionRequest = {
             onTakePhoto()
         },
-        selectedOption = state.selectedConvertOption,
     )
+    when(state.processing){
+        LoadingState.COMPLETE -> {}
+        LoadingState.LOADING -> Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .background(color = MaterialTheme.colorScheme.surface.copy(alpha = 0.5f))
+                .zIndex(1f)
+                .alpha(0.8f)
+        ){
+            LoadingAnimation()
+        }
+        LoadingState.TIMEOUT -> {
+            Toast.makeText(context,Constants.ERROR_TIMEOUT_MESSAGE,Toast.LENGTH_SHORT)
+        }
+        LoadingState.ERROR -> {
+            Toast.makeText(context,state.errorMessage,Toast.LENGTH_SHORT)
+        }
+    }
 }
 
 
 @Composable
 fun HomeScreenContent(
-    context: Context,
-    capturedImageUri: File?,
+    selectImageFile: File?,
     pixelImageBitmap: Bitmap?,
+    selectedOption: Int,
+    processing: LoadingState,
     onSelectImageFromGallery: () -> Unit,
     onConvertImage: () -> Unit,
     onSaveImage: () -> Unit,
     onShareImage: () -> Unit,
     onClear: () -> Unit,
-    takePhotoAction: () -> Unit,
+    onCameraPermissionRequest: () -> Unit,
     onOptionSelected: (Int) -> Unit,
-    selectedOption: Int,
 ) {
     val screenHeight = LocalConfiguration.current.screenHeightDp.dp
     val screenWidth = LocalConfiguration.current.screenWidthDp.dp
     LocalConfiguration.current.screenWidthDp.dp
-    val pixelFontFamily = remember {
-        FontFamily(
-            typeface = ResourcesCompat.getFont(
-                context,
-                R.font.joystix_monospace
-            )!!
-        )
-    }
-
     Box(
         modifier = Modifier
             .safeDrawingPadding()
             .fillMaxSize()
-            .background(color = Color.White), contentAlignment = Alignment.Center
+            .background(color = MaterialTheme.colorScheme.primary), contentAlignment = Alignment.Center
     ) {
-
         Column(
             modifier = Modifier
                 .fillMaxSize()
@@ -221,16 +241,28 @@ fun HomeScreenContent(
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.SpaceAround
         ) {
-            DisplayImage(pixelImageBitmap, screenHeight, pixelFontFamily, selectedOption)
-            ActionButtons(pixelImageBitmap, pixelFontFamily, onSaveImage, onShareImage, onClear)
-            DisplayCapturedImage(
-                capturedImageUri,
-                pixelFontFamily,
-                screenWidth,
-                selectedOption,
-                onOptionSelected
+            DisplayImage(
+                pixelImageBitmap = pixelImageBitmap,
+                screenHeight = screenHeight,
+                selectedOption = selectedOption
             )
-            BottomBar(onSelectImageFromGallery, onConvertImage, takePhotoAction)
+            ActionButtons(
+                pixelImageBitmap = pixelImageBitmap,
+                onSaveImage = onSaveImage,
+                onShareImage = onShareImage,
+                onClear = onClear
+            )
+            DisplayCapturedImage(
+                selectImageFile = selectImageFile,
+                screenWidth = screenWidth,
+                selectedOption = selectedOption,
+                onOptionSelected = onOptionSelected
+            )
+            BottomBar(
+                onSelectImageFromGallery = onSelectImageFromGallery,
+                onConvertImage = onConvertImage,
+                onCameraPermissionRequest = onCameraPermissionRequest
+            )
 
         }
     }
@@ -241,7 +273,6 @@ fun HomeScreenContent(
 fun DisplayImage(
     pixelImageBitmap: Bitmap?,
     screenHeight: Dp,
-    pixelFontFamily: FontFamily,
     selectedOption: Int,
 ) {
 
@@ -260,7 +291,7 @@ fun DisplayImage(
             )
         } ?: run {
             // place widget
-            DisplayImagePlaceHolder(screenHeight, pixelFontFamily, selectedOption)
+            DisplayImagePlaceHolder(screenHeight = screenHeight, selectedOption = selectedOption)
         }
     }
 }
@@ -268,7 +299,6 @@ fun DisplayImage(
 @Composable
 private fun DisplayImagePlaceHolder(
     screenHeight: Dp,
-    pixelFontFamily: FontFamily,
     selectedOption: Int
 ) {
     Box(
@@ -278,17 +308,12 @@ private fun DisplayImagePlaceHolder(
             .padding(4.dp),
         contentAlignment = Alignment.Center
     ) {
-        val contentList = listOf(
-            "Example", "Pixel", "Images"
-        )
 
         @Composable
         fun CustomText(index: Int) {
             Text(
-                contentList[index],
-                color = Color.Black,
-                style = TextStyle(fontFamily = pixelFontFamily),
-                fontSize = 36.sp
+                Constants.contentList[index],
+                style = MaterialTheme.typography.bodyLarge
             )
         }
         Column(
@@ -311,7 +336,6 @@ private fun DisplayImagePlaceHolder(
 @Composable
 fun ActionButtons(
     pixelImageBitmap: Bitmap?,
-    pixelFontFamily: FontFamily,
     onSaveImage: () -> Unit,
     onShareImage: () -> Unit,
     onClear: () -> Unit
@@ -327,8 +351,8 @@ fun ActionButtons(
                 modifier = Modifier
                     .fillMaxWidth()
                     .height(80.dp)
-                    .background(Color.White, RoundedCornerShape(12.dp))
-                    .border(2.dp, Color.Black, RoundedCornerShape(12.dp))
+                    .background(MaterialTheme.colorScheme.primary, RoundedCornerShape(12.dp))
+                    .border(2.dp, MaterialTheme.colorScheme.secondary, RoundedCornerShape(12.dp))
                     .padding(4.dp),
                 horizontalArrangement = Arrangement.Center,
                 verticalAlignment = Alignment.CenterVertically
@@ -345,33 +369,31 @@ fun ActionButtons(
             }
 
         } ?: run {
-            ActionButtons(pixelFontFamily)
+            PixelActionButtons()
         }
     }
 }
 
 @Composable
-private fun ActionButtons(pixelFontFamily: FontFamily) {
+private fun PixelActionButtons() {
     Row(
         modifier = Modifier
             .fillMaxWidth()
             .height(80.dp)
-            .background(Color.White, RoundedCornerShape(12.dp))
-            .border(2.dp, Color.Black, RoundedCornerShape(12.dp))
+            .background(MaterialTheme.colorScheme.primary, RoundedCornerShape(12.dp))
+            .border(2.dp, MaterialTheme.colorScheme.secondary, RoundedCornerShape(12.dp))
             .padding(8.dp),
         horizontalArrangement = Arrangement.SpaceAround,
         verticalAlignment = Alignment.CenterVertically
     ) {
         Text(
-            text = "⬆️Here is a sample image.",
-            color = Color.Black,
-            style = TextStyle(fontFamily = pixelFontFamily),
+            text = Constants.WIDGET_DESCRIPTION1,
+            style = MaterialTheme.typography.bodyMedium,
             modifier = Modifier.weight(1f)
         )
         Text(
-            text = "Switch options to browse image previews.⬇️",
-            color = Color.Black,
-            style = TextStyle(fontFamily = pixelFontFamily),
+            text = Constants.WIDGET_DESCRIPTION2,
+            style = MaterialTheme.typography.bodyMedium,
             modifier = Modifier.weight(1f)
         )
 
@@ -382,8 +404,7 @@ private fun ActionButtons(pixelFontFamily: FontFamily) {
 
 @Composable
 fun DisplayCapturedImage(
-    capturedImage: File?,
-    pixelFontFamily: FontFamily,
+    selectImageFile: File?,
     screenWidth: Dp,
     selectedOption: Int,
     onOptionSelected: (Int) -> Unit,
@@ -395,10 +416,10 @@ fun DisplayCapturedImage(
             .padding(start = 16.dp, end = 16.dp),
         horizontalArrangement = Arrangement.Start,
     ) {
-        capturedImage?.let {
+        selectImageFile?.let {
             AsyncImage(
                 modifier = Modifier.size(160.dp),
-                model = capturedImage,
+                model = selectImageFile,
                 contentDescription = null,
                 contentScale = ContentScale.Fit
             )
@@ -420,9 +441,8 @@ fun DisplayCapturedImage(
                         contentDescription = "Icon",
                     )
                     Text(
-                        "Update\nfrom⬇️",
-                        color = Color.Black,
-                        style = TextStyle(fontFamily = pixelFontFamily, fontSize = 16.sp)
+                        Constants.IMAGE_UPLOAD_TITLE,
+                        style = MaterialTheme.typography.bodySmall
                     )
                 }
             }
@@ -446,7 +466,6 @@ fun DisplayCapturedImage(
                     optionsShow = Constants.radioButtonTexts,
                     selectedOption = selectedOption,
                     onOptionSelected = onOptionSelected,
-                    pixelFontFamily = pixelFontFamily,
                     screenWidth = screenWidth
                 )
 
@@ -472,8 +491,8 @@ fun BottomBar(
             modifier = Modifier
                 .fillMaxWidth()
                 .height(80.dp)
-                .background(Color.White, RoundedCornerShape(12.dp))
-                .border(2.dp, Color.Black, RoundedCornerShape(12.dp))
+                .background(MaterialTheme.colorScheme.primary, RoundedCornerShape(12.dp))
+                .border(2.dp, MaterialTheme.colorScheme.secondary, RoundedCornerShape(12.dp))
                 .padding(4.dp),
             horizontalArrangement = Arrangement.Center,
             verticalAlignment = Alignment.CenterVertically
@@ -518,25 +537,13 @@ fun shareImage(context: Context, file: File) {
     val shareIntent: Intent = Intent().apply {
         action = Intent.ACTION_SEND
         putExtra(Intent.EXTRA_STREAM, contentUri)
-        type = "image/jpeg"
+        type = Constants.SHARE_IMAGE_TYPE
         addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
     }
     context.startActivity(Intent.createChooser(shareIntent, null))
 }
 
-// custom pixel BG
-fun DrawScope.drawPixelMatrix(pixelSize: Float, rows: Int, columns: Int) {
-    for (row in 0 until rows) {
-        for (column in 0 until columns) {
-            val color = Constants.colorShades[Random.nextInt(Constants.colorShades.size)]
-            drawRect(
-                color = color,
-                topLeft = androidx.compose.ui.geometry.Offset(column * pixelSize, row * pixelSize),
-                size = androidx.compose.ui.geometry.Size(pixelSize, pixelSize)
-            )
-        }
-    }
-}
+
 
 @Composable
 fun CustomRadioButton(
@@ -561,7 +568,6 @@ fun CustomRadioGroup(
     optionsShow: List<String>,
     selectedOption: Int,
     onOptionSelected: (Int) -> Unit,
-    pixelFontFamily: FontFamily,
     screenWidth: Dp,
 ) {
     Column(
@@ -585,8 +591,8 @@ fun CustomRadioGroup(
                 Row(
                     modifier = Modifier
                         .width(screenWidth / 2)
-                        .background(Color.White)
-                        .border(2.dp, Color.Black, RoundedCornerShape(6.dp))
+                        .background(MaterialTheme.colorScheme.primary)
+                        .border(2.dp, MaterialTheme.colorScheme.secondary, RoundedCornerShape(6.dp))
                         .padding(top = 4.dp, bottom = 4.dp, start = 12.dp, end = 12.dp),
                     horizontalArrangement = Arrangement.SpaceBetween,
                 ) {
@@ -594,11 +600,7 @@ fun CustomRadioGroup(
                     for (part in parts) {
                         Text(
                             text = part,
-                            style = TextStyle(
-                                fontFamily = pixelFontFamily,
-                                color = Color.Black,
-                                fontSize = 14.sp
-                            )
+                            style = MaterialTheme.typography.bodySmall
                         )
                     }
                 }
@@ -611,8 +613,8 @@ fun CustomRadioGroup(
 fun CameraExplanationDialog(onConfirm: () -> Unit, onDismiss: () -> Unit) {
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text("Camera access") },
-        text = { Text("PhotoLog would like access to the camera to be able take picture when creating a log") },
+        title = { Text(Constants.PERMISSION_REQUEST_TITLE1) },
+        text = { Text(Constants.PERMISSION_REQUEST_TEXT2) },
         icon = {
             Icon(
                 Icons.Default.Add,
@@ -650,5 +652,6 @@ fun Context.getActivity(): Activity {
         }
         currentContext = currentContext.baseContext
     }
-    throw IllegalStateException("Permissions should be called in the context of an Activity")
+    throw IllegalStateException(Constants.PERMISSION_REQUEST_TEXT1)
 }
+

@@ -11,5 +11,5 @@ data class CameraState(
         .setCaptureMode(ImageCapture.CAPTURE_MODE_MINIMIZE_LATENCY).build(),
     val imageFile: File? = null,
     val captureError: ImageCaptureException? = null,
-    var capturedImageUri: Uri? = null
+    var capturedImageUri: Uri? = null,
 )

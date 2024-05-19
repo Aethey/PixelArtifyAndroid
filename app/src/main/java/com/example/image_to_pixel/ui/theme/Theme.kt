@@ -9,18 +9,22 @@ import androidx.compose.material3.dynamicDarkColorScheme
 import androidx.compose.material3.dynamicLightColorScheme
 import androidx.compose.material3.lightColorScheme
 import androidx.compose.runtime.Composable
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.drawscope.DrawScope
 import androidx.compose.ui.platform.LocalContext
+import com.example.image_to_pixel.Constants
+import kotlin.random.Random
 
 private val DarkColorScheme = darkColorScheme(
-    primary = Purple80,
-    secondary = PurpleGrey80,
-    tertiary = Pink80
+    primary = Color.Black,
+    secondary = Color.White,
+//    tertiary = Pink80
 )
 
 private val LightColorScheme = lightColorScheme(
-    primary = Purple40,
-    secondary = PurpleGrey40,
-    tertiary = Pink40
+    primary = Color.White,
+    secondary = Color.Black,
+//    tertiary = Pink40
 
     /* Other default colors to override
     background = Color(0xFFFFFBFE),
@@ -33,6 +37,20 @@ private val LightColorScheme = lightColorScheme(
     */
 )
 
+// custom pixel BG
+fun DrawScope.drawPixelMatrix(pixelSize: Float, rows: Int, columns: Int) {
+    for (row in 0 until rows) {
+        for (column in 0 until columns) {
+            val color = Constants.colorShades[Random.nextInt(Constants.colorShades.size)]
+            drawRect(
+                color = color,
+                topLeft = androidx.compose.ui.geometry.Offset(column * pixelSize, row * pixelSize),
+                size = androidx.compose.ui.geometry.Size(pixelSize, pixelSize)
+            )
+        }
+    }
+}
+
 @Composable
 fun PixelImageTheme(
     darkTheme: Boolean = isSystemInDarkTheme(),
@@ -41,18 +59,23 @@ fun PixelImageTheme(
     content: @Composable () -> Unit
 ) {
     val colorScheme = when {
-        dynamicColor && Build.VERSION.SDK_INT >= Build.VERSION_CODES.S -> {
-            val context = LocalContext.current
-            if (darkTheme) dynamicDarkColorScheme(context) else dynamicLightColorScheme(context)
-        }
+//        dynamicColor && Build.VERSION.SDK_INT >= Build.VERSION_CODES.S -> {
+//            val context = LocalContext.current
+//            if (darkTheme) dynamicDarkColorScheme(context) else dynamicLightColorScheme(context)
+//        }
 
         darkTheme -> DarkColorScheme
         else -> LightColorScheme
     }
 
+    val textScheme = when{
+        darkTheme -> pixelFontFamilyDark
+        else -> pixelFontFamilyLight
+    }
+
     MaterialTheme(
         colorScheme = colorScheme,
-        typography = Typography,
+        typography = textScheme,
         content = content
     )
 }

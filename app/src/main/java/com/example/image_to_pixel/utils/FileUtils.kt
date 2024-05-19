@@ -42,7 +42,6 @@ object FileUtils {
         pixelSize: Int,
         withPadding: Int
     ): String {
-        println("input-imagePath: $imagePath")
         val py = Python.getInstance()
         val pyf = py.getModule("convert")
         return pyf.callAttr("convert", imagePath, filePath, kernelSize, pixelSize, withPadding)

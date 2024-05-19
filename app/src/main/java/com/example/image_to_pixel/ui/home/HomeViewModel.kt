@@ -81,8 +81,10 @@ class HomeViewModel(
     }
 
     fun onSaveFileToGallery() {
+        uiState = uiState.copy(processing = LoadingState.LOADING)
         viewModelScope.launch {
             uiState.selectImageFile?.let { photoSaver.saveFileToGallery(context, it) }
+            uiState = uiState.copy(processing = LoadingState.COMPLETE)
         }
     }
 
@@ -96,7 +98,6 @@ class HomeViewModel(
     }
 
     fun refreshSavedPhoto() {
-        println("refreshSavedPhoto save photo!!!")
         uiState = uiState.copy(selectImageFile = photoSaver.getImageFile())
     }
 
@@ -113,27 +114,29 @@ class HomeViewModel(
     }
 
     fun convertImage(file: File?, imageType: Int) {
-        println("imageType.value.toString() is :")
-        println(imageType.toString())
+        uiState = uiState.copy(processing = LoadingState.LOADING)
         viewModelScope.launch {
-            Toast.makeText(context, "Loading...", Toast.LENGTH_SHORT).show()
-            file?.let {
-                val path =
-                    withContext(Dispatchers.IO) { FileUtils.copyUriToInternalStorage(file) }
-                path?.let { inputPath ->
-                    val resultPath = withContext(Dispatchers.IO) {
-                        FileUtils.convertImage(
-                            inputPath,
-                            inputPath,
-                            kernelSize = _imageType[imageType][0],
-                            pixelSize = _imageType[imageType][1],
-                            withPadding = _imageType[imageType][2]
-                        )
+            try{
+                file?.let {
+                    val path =
+                        withContext(Dispatchers.IO) { FileUtils.copyUriToInternalStorage(file) }
+                    path?.let { inputPath ->
+                        val resultPath = withContext(Dispatchers.IO) {
+                            FileUtils.convertImage(
+                                inputPath,
+                                inputPath,
+                                kernelSize = _imageType[imageType][0],
+                                pixelSize = _imageType[imageType][1],
+                                withPadding = _imageType[imageType][2]
+                            )
+                        }
+                        val bitmap =
+                            withContext(Dispatchers.IO) { FileUtils.loadImageFromFile(resultPath) }
+                        uiState = uiState.copy(pixelImageBitmap = bitmap, pixelImageFile = File(inputPath),processing = LoadingState.COMPLETE)
                     }
-                    val bitmap =
-                        withContext(Dispatchers.IO) { FileUtils.loadImageFromFile(resultPath) }
-                    uiState = uiState.copy(pixelImageBitmap = bitmap, pixelImageFile = File(inputPath))
                 }
+            }catch (e: Exception) {
+                uiState = uiState.copy(processing = LoadingState.ERROR, errorMessage = e.message)
             }
         }
     }

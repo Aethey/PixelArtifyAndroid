@@ -4,7 +4,7 @@ import androidx.compose.ui.graphics.Color
 import com.example.PixelImage.R
 
 object Constants {
-    val radioButtonTexts = listOf("SMALL PIXEL", "LARGE PIXEL", "ISOLATE PIXEL")
+    const val SHARE_IMAGE_TYPE = "image/jpeg"
 
     val colorShades = listOf(
         Color(0xFFFFFFFF), // 纯白色
@@ -22,5 +22,16 @@ object Constants {
         R.drawable.example2,
         R.drawable.example3
     )
+    val contentList = listOf(
+        "Example", "Pixel", "Images"
+    )
+    val radioButtonTexts = listOf("SMALL PIXEL", "LARGE PIXEL", "ISOLATE PIXEL")
+    const val PERMISSION_REQUEST_TITLE1 = "Camera access"
+    const val PERMISSION_REQUEST_TEXT1 = "Permissions should be called in the context of an Activity"
+    const val PERMISSION_REQUEST_TEXT2 = "PixelConvert would like access to the camera to be able take picture when creating a log"
+    const val IMAGE_UPLOAD_TITLE = "Update\nfrom⬇️"
+    const val WIDGET_DESCRIPTION1 = "⬆️Here is a sample image."
+    const val WIDGET_DESCRIPTION2 = "Switch options to browse image previews.⬇️"
+    const val ERROR_TIMEOUT_MESSAGE = "timeout 😭"
 
 }

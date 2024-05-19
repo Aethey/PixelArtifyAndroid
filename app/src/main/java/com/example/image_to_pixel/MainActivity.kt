@@ -16,6 +16,7 @@ import com.chaquo.python.Python
 import com.chaquo.python.android.AndroidPlatform
 import com.example.image_to_pixel.ui.camera.CameraScreen
 import com.example.image_to_pixel.ui.home.HomeScreen
+import com.example.image_to_pixel.ui.theme.PixelImageTheme
 import com.example.image_to_pixel.utils.PermissionManager
 import kotlinx.coroutines.launch
 
@@ -30,8 +31,9 @@ class MainActivity : ComponentActivity() {
 
         enableEdgeToEdge()
         setContent {
-            App()
-
+            PixelImageTheme {
+                App()
+            }
         }
     }
 
