@@ -1,8 +1,8 @@
-# Android图片转换应用
+# Image Conversion App
 
-1. Kotlin Compose 开发的将图片转换成像素风格的应用
-2. 利用 Chaquopy 集成 Python 代码，参考：[photo2pixel](https://github.com/Jzou44/photo2pixel)
-3. MVVM 架构
+1. An image conversion app developed with Kotlin Compose to transform images into pixel art style.
+2. Integrates Python code execution using Chaquopy, referencing [photo2pixel](https://github.com/Jzou44/photo2pixel).
+3. Built with the MVVM architecture.
 
 <table>
   <tr>
@@ -13,13 +13,13 @@
 </table>
 
 <details>
-<summary>English</summary>
+<summary>Chinese</summary>
 
-# Image Conversion App
+# 图片转换应用
 
-1. An image conversion app developed with Kotlin Compose to transform images into pixel art style.
-2. Integrates Python code execution using Chaquopy, referencing [photo2pixel](https://github.com/Jzou44/photo2pixel).
-3. Built with the MVVM architecture.
+1. Kotlin Compose 开发的将图片转换成像素风格的应用
+2. 利用 Chaquopy 集成 Python 代码，参考：[photo2pixel](https://github.com/Jzou44/photo2pixel)
+3. MVVM 架构
 
 </details>
 
