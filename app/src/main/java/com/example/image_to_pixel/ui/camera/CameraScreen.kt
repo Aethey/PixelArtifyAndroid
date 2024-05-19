@@ -35,7 +35,7 @@ fun CameraScreen(
 ) {
 
     val lifecycleOwner = LocalLifecycleOwner.current
-    val state = viewModel.cameraState
+    val state = viewModel.uiState
 
     val previewUseCase = remember { Preview.Builder().build() }
 
