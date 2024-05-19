@@ -13,7 +13,7 @@
 </table>
 
 <details>
-<summary>Chinese</summary>
+<summary>中文</summary>
 
 # 图片转换应用
 
