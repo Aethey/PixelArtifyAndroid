@@ -3,20 +3,21 @@ package com.example.image_to_pixel.ui.home
 import android.Manifest
 import android.app.Application
 import android.content.Context
+import android.content.Intent
 import android.content.pm.PackageManager
+import android.graphics.Bitmap
 import android.net.Uri
 import android.util.Log
 import android.widget.Toast
-import androidx.compose.runtime.MutableState
-import androidx.lifecycle.ViewModelProvider.AndroidViewModelFactory.Companion.APPLICATION_KEY
-
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import androidx.core.content.ContextCompat
+import androidx.core.content.FileProvider
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
+import androidx.lifecycle.ViewModelProvider.AndroidViewModelFactory.Companion.APPLICATION_KEY
 import androidx.lifecycle.viewModelScope
 import androidx.lifecycle.viewmodel.CreationExtras
 import com.example.image_to_pixel.PixelApplication
@@ -24,21 +25,19 @@ import com.example.image_to_pixel.utils.FileUtils
 import com.example.image_to_pixel.utils.MediaRepository
 import com.example.image_to_pixel.utils.PhotoSaverRepository
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.flow.map
-import kotlinx.coroutines.flow.toList
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import java.io.File
+import java.io.FileOutputStream
+import java.io.IOException
 import java.util.Calendar
 
-class HomeViewModel (
+class HomeViewModel(
     application: Application,
     private val photoSaver: PhotoSaverRepository
-) : AndroidViewModel(application){
+) : AndroidViewModel(application) {
     private val context: Context
         get() = getApplication()
-
-    private val mediaRepository = MediaRepository(context)
 
     var uiState by mutableStateOf(
         HomeState(
@@ -54,10 +53,6 @@ class HomeViewModel (
         listOf(10, 32, 1)
     )
 
-    fun isValid(): Boolean {
-        return !photoSaver.isEmpty() && !uiState.isSaving
-    }
-
     private fun hasPermission(permission: String): Boolean {
         return ContextCompat.checkSelfPermission(
             context,
@@ -70,6 +65,7 @@ class HomeViewModel (
             Manifest.permission.CAMERA -> {
                 uiState = uiState.copy(hasCameraAccess = isGranted)
             }
+
             else -> {
                 Log.e("Permission change", "Unexpected permission: $permission")
             }
@@ -84,29 +80,9 @@ class HomeViewModel (
         return calendar.timeInMillis
     }
 
-    fun onDateChange(dateInMillis: Long) {
-        uiState = uiState.copy(date = dateInMillis)
-    }
-
-
-    fun loadLocalPickerPictures() {
+    fun onSaveFileToGallery() {
         viewModelScope.launch {
-            mediaRepository.fetchSingleImage()?.let { entity ->
-                uiState = uiState.copy(localPickerPhoto = entity.uri)
-            }
-        }
-    }
-
-    fun onSaveFileToGallery(){
-        viewModelScope.launch {
-            uiState.savedPhoto?.let { photoSaver.saveFileToGallery(context, it) }
-        }
-    }
-
-    fun onLocalPhotoPickerSelect(photo: Uri) {
-        viewModelScope.launch {
-            photoSaver.cacheFromUri(photo)
-            refreshSavedPhoto()
+            uiState.selectImageFile?.let { photoSaver.saveFileToGallery(context, it) }
         }
     }
 
@@ -119,26 +95,24 @@ class HomeViewModel (
         }
     }
 
-    // region Photo management
-
-
     fun refreshSavedPhoto() {
         println("refreshSavedPhoto save photo!!!")
-        uiState = uiState.copy(savedPhoto = photoSaver.getPhotos())
+        uiState = uiState.copy(selectImageFile = photoSaver.getImageFile())
     }
 
-    fun onPhotoRemoved(photo: File) {
-        viewModelScope.launch {
-            photoSaver.removeFile(photo)
-            refreshSavedPhoto()
-        }
+    fun onClearUIState() {
+        uiState = uiState.copy(
+            pixelImageBitmap = null,
+            pixelImageFile = null,
+            selectedConvertOption = 0,
+            selectImageFile = null)
     }
 
-    fun selectedConvertOption(type:Int){
+    fun selectedConvertOption(type: Int) {
         uiState = uiState.copy(selectedConvertOption = type)
     }
 
-    fun convertImage(file: File?,imageType: Int) {
+    fun convertImage(file: File?, imageType: Int) {
         println("imageType.value.toString() is :")
         println(imageType.toString())
         viewModelScope.launch {
@@ -158,7 +132,7 @@ class HomeViewModel (
                     }
                     val bitmap =
                         withContext(Dispatchers.IO) { FileUtils.loadImageFromFile(resultPath) }
-                    uiState = uiState.copy(pixelImageBitmap = bitmap)
+                    uiState = uiState.copy(pixelImageBitmap = bitmap, pixelImageFile = File(inputPath))
                 }
             }
         }

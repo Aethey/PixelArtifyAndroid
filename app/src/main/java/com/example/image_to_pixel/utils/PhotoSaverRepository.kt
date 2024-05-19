@@ -22,7 +22,6 @@ import android.content.Context
 import android.net.Uri
 import android.os.Environment
 import android.provider.MediaStore
-import com.example.image_to_pixel.data.MAX_LOG_PHOTOS_LIMIT
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import java.io.File
@@ -31,20 +30,20 @@ import java.io.OutputStream
 
 class PhotoSaverRepository(context: Context, private val contentResolver: ContentResolver) {
 
-    private var _photo:File? = null
+    private var _imageFile:File? = null
 
-    fun getPhotos() = _photo
-    fun isEmpty() = _photo == null
+    fun getImageFile() = _imageFile
+    fun isEmpty() = _imageFile == null
 
-    private val cacheFolder = File(context.cacheDir, "photo").also { it.mkdir() }
-    val photoFolder = File(context.filesDir, "photo").also { it.mkdir() }
+    private val cacheFolder = File(context.cacheDir, "pixelImage").also { it.mkdir() }
+    private val pixelImageFolder = File(context.filesDir, "pixelImage").also { it.mkdir() }
 
-    private fun generateFileName() = "${System.currentTimeMillis()}.jpg"
-    private fun generatePhotoLogFile() = File(photoFolder, generateFileName())
+    private fun generateFileName() = "${System.currentTimeMillis()}.png"
+    private fun generatePhotoLogFile() = File(pixelImageFolder, generateFileName())
     fun generatePhotoCacheFile() = File(cacheFolder, generateFileName())
 
-    fun cacheCapturedPhoto(photo: File) {
-        _photo = photo
+    fun cacheCapturedPhoto(imageFile: File) {
+        _imageFile = imageFile
     }
 
     @Suppress("BlockingMethodInNonBlockingContext")
@@ -55,7 +54,7 @@ class PhotoSaverRepository(context: Context, private val contentResolver: Conten
 
                 cachedPhoto.outputStream().use { output ->
                     input.copyTo(output)
-                    _photo = cachedPhoto
+                    _imageFile = cachedPhoto
                 }
             }
         }
@@ -65,17 +64,17 @@ class PhotoSaverRepository(context: Context, private val contentResolver: Conten
         cacheFromUri(uri)
     }
 
-    suspend fun removeFile(photo: File) {
+    suspend fun removeFile(imageFile: File) {
         withContext(Dispatchers.IO) {
-            photo.delete()
-            _photo = null
+            imageFile.delete()
+            _imageFile = null
         }
     }
 
     suspend fun savePhotos(): File {
         return withContext(Dispatchers.IO) {
             val savedPhotos = generatePhotoLogFile()
-            _photo = null
+            _imageFile = null
             savedPhotos
         }
     }
@@ -84,7 +83,7 @@ class PhotoSaverRepository(context: Context, private val contentResolver: Conten
         val contentResolver = context.contentResolver
         val contentValues = ContentValues().apply {
             put(MediaStore.MediaColumns.DISPLAY_NAME, generateFileName())
-            put(MediaStore.MediaColumns.MIME_TYPE, "image/png") // 请根据文件类型调整 MIME 类型
+            put(MediaStore.MediaColumns.MIME_TYPE, "image/png")
             put(MediaStore.MediaColumns.RELATIVE_PATH, Environment.DIRECTORY_PICTURES)
         }
         val uri: Uri? = contentResolver.insert(MediaStore.Images.Media.EXTERNAL_CONTENT_URI, contentValues)

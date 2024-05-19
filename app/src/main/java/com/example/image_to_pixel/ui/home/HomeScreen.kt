@@ -115,8 +115,7 @@ fun HomeScreen(
         viewModel.refreshSavedPhoto()
     }
 
-    fun onImageCapture() {
-        viewModel.loadLocalPickerPictures()
+    fun onSelectImageFromGallery() {
         coroutineScope.launch {
             pickImage.launch(
                 PickVisualMediaRequest(
@@ -139,10 +138,10 @@ fun HomeScreen(
     }
 
     fun onConvertImage() {
-        viewModel.convertImage(state.savedPhoto, state.selectedConvertOption)
+        viewModel.convertImage(state.selectImageFile, state.selectedConvertOption)
     }
     fun onShareImage() {
-        state.savedPhoto?.let { shareImage(context, it) }
+        state.pixelImageFile?.let { shareImage(context, it) }
     }
     fun onSaveImage(){
         viewModel.onSaveFileToGallery()
@@ -152,12 +151,16 @@ fun HomeScreen(
         viewModel.selectedConvertOption(index)
     }
 
+    fun onClearUIState(){
+        viewModel.onClearUIState()
+    }
+
 // init widget
     HomeScreenContent(
         context,
-        state.savedPhoto,
+        state.selectImageFile,
         state.pixelImageBitmap,
-        onImageCapture = { onImageCapture() },
+        onSelectImageFromGallery = { onSelectImageFromGallery() },
         onConvertImage = {
             onConvertImage()
         },
@@ -168,6 +171,7 @@ fun HomeScreen(
             onOptionSelected(it)
         },
         onClear = {
+            onClearUIState()
         },
         takePhotoAction = {
             onTakePhoto()
@@ -182,7 +186,7 @@ fun HomeScreenContent(
     context: Context,
     capturedImageUri: File?,
     pixelImageBitmap: Bitmap?,
-    onImageCapture: () -> Unit,
+    onSelectImageFromGallery: () -> Unit,
     onConvertImage: () -> Unit,
     onSaveImage: () -> Unit,
     onShareImage: () -> Unit,
@@ -226,7 +230,7 @@ fun HomeScreenContent(
                 selectedOption,
                 onOptionSelected
             )
-            BottomBar(onImageCapture, onConvertImage, takePhotoAction)
+            BottomBar(onSelectImageFromGallery, onConvertImage, takePhotoAction)
 
         }
     }
@@ -454,7 +458,7 @@ fun DisplayCapturedImage(
 
 @Composable
 fun BottomBar(
-    onImageCapture: () -> Unit,
+    onSelectImageFromGallery: () -> Unit,
     onConvertImage: () -> Unit,
     onCameraPermissionRequest: () -> Unit
 ) {
@@ -475,7 +479,7 @@ fun BottomBar(
             verticalAlignment = Alignment.CenterVertically
         ) {
             CustomButton({ onCameraPermissionRequest() }, R.drawable.common_camera, null)
-            CustomButton({ onImageCapture() }, R.drawable.common_gallery, null)
+            CustomButton({ onSelectImageFromGallery() }, R.drawable.common_gallery, null)
             CustomButton(
                 { onConvertImage() },
                 R.drawable.common_convert,

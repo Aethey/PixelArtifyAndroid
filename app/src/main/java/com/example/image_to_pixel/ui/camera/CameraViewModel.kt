@@ -31,15 +31,7 @@ class CameraViewModel(
         get() = getApplication<PixelApplication>()
     private val cameraExecutor = Executors.newSingleThreadExecutor()
 
-    data class CameraState(
-        val isTakingPicture: Boolean = false,
-        val imageCapture: ImageCapture = ImageCapture.Builder()
-            .setCaptureMode(ImageCapture.CAPTURE_MODE_MINIMIZE_LATENCY).build(),
-        val imageFile: File? = null,
-        val captureError: ImageCaptureException? = null
-    )
-
-    var cameraState by mutableStateOf(CameraState())
+    var uiState by mutableStateOf(CameraState())
         private set
 
 
@@ -53,11 +45,11 @@ class CameraViewModel(
 
     fun takePicture() {
         viewModelScope.launch {
-            cameraState = cameraState.copy(isTakingPicture = true)
+            uiState = uiState.copy(isTakingPicture = true)
 
             val savedFile = photoSaver.generatePhotoCacheFile()
 
-            cameraState.imageCapture.takePicture(
+            uiState.imageCapture.takePicture(
                 ImageCapture.OutputFileOptions.Builder(savedFile).build(),
                 cameraExecutor,
                 object : ImageCapture.OnImageSavedCallback {
@@ -65,7 +57,7 @@ class CameraViewModel(
                         Log.i("TakePicture", "capture succeeded")
 
                         photoSaver.cacheCapturedPhoto(savedFile)
-                        cameraState = cameraState.copy(imageFile = savedFile)
+                        uiState = uiState.copy(imageFile = savedFile)
                     }
 
                     override fun onError(ex: ImageCaptureException) {
