@@ -6,9 +6,9 @@
 
 <table>
   <tr>
-    <td><img src="example1.png" alt="Image 1" width="230"/></td>
-    <td><img src="example2.png" alt="Image 2" width="230"/></td>
-    <td><img src="example3.png" alt="Image 3" width="230"/></td>
+    <td><img src="./example_img/example1.png" alt="Image 1" width="230"/></td>
+    <td><img src="./example_img/example2.png" alt="Image 2" width="230"/></td>
+    <td><img src="./example_img/example3.png" alt="Image 3" width="230"/></td>
   </tr>
 </table>
 
